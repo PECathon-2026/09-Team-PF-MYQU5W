@@ -1,0 +1,8 @@
+﻿playwright
+fastapi
+uvicorn[standard]
+streamlit
+pillow
+pydantic
+requests
+pytest

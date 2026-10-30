@@ -1,0 +1,46 @@
+# PrivacyLens — Development Rules & Security Constraints
+# ================================================================
+# ZERO PII LEAKAGE POLICY — Every contributor must follow these rules.
+# ================================================================
+
+## Core Security Invariant
+"Compute what is sensitive locally. Reason globally only on sanitized data."
+
+## Absolute Rules
+1. **NEVER** transmit raw PII over the network. All outgoing data MUST pass
+   through `core.guard.validate_outgoing_payload()` before transmission.
+2. **NEVER** log, print, or serialize raw secret values. Use placeholders
+   like `[REDACTED:TYPE_N]` in all logs and debug output.
+3. **NEVER** include raw PII in LLM prompts or API request bodies.
+   The `agent.reasoner` module ONLY receives sanitized DOM content.
+4. **NEVER** store secrets to disk. The `SecretStore` is in-memory only
+   and MUST be cleared after each session via `secret_store.clear()`.
+5. **ALWAYS** use fail-closed behavior: if PII detection fails or is
+   uncertain, BLOCK the payload. Never fail open.
+
+## Module Boundaries
+- `core/` owns all PII detection, sanitization, and guarding logic.
+  Other modules MUST NOT implement their own PII detection.
+- `agent/` handles browser automation and LLM reasoning.
+  It MUST import from `core/` for all PII-related operations.
+- `ui/` handles visualization and image redaction.
+  It MUST NOT transmit any data externally.
+- `eval/` contains test scenarios and benchmarks.
+  Test data stays local and is never sent to external services.
+
+## Data Flow Rules
+- Raw DOM → `core.detector` → `core.sanitizer` → `core.guard` → Cloud LLM
+- Cloud LLM response → `agent.executor` + `SecretStore` → Local Browser
+- Screenshots → `ui.image_redactor` → Redacted Screenshot → Cloud LLM
+
+## Code Style
+- Type hints on all function signatures.
+- Docstrings on all public functions and classes.
+- Use `logging` module, never `print()` for operational output.
+- Use `pathlib.Path` for all file system operations.
+
+## Testing
+- Every PII detection pattern MUST have corresponding test cases.
+- Every sanitization rule MUST have a round-trip test.
+- Guard tests MUST verify fail-closed behavior on edge cases.
+- Benchmark suite (`eval/run_benchmark.py`) MUST pass before merge.
